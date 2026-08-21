@@ -69,8 +69,6 @@ impl GestorAudio {
 fn agregar_musica_disponible(sumidero: &Sink) -> bool {
     for nombre_archivo in [
         "assets/music/taylor.wav",
-        "assets/music/taylor_swift.mp3",
-        "assets/music/taylor.mp4",
         "assets/music/ambient.mp3",
     ] {
         for ruta in rutas_posibles_musica(nombre_archivo) {
