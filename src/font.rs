@@ -1,6 +1,6 @@
-use crate::framebuffer::Framebuffer;
+use crate::framebuffer::BufferPantalla;
 
-const GLYPHS: &[(char, [u8; 7])] = &[
+const GLIFOS: &[(char, [u8; 7])] = &[
     ('A', [14, 17, 17, 31, 17, 17, 17]),
     ('B', [30, 17, 17, 30, 17, 17, 30]),
     ('C', [14, 17, 16, 16, 16, 17, 14]),
@@ -49,50 +49,53 @@ const GLYPHS: &[(char, [u8; 7])] = &[
     ('!', [4, 4, 4, 4, 4, 0, 4]),
 ];
 
-pub fn draw_text(
-    framebuffer: &mut Framebuffer,
-    text: &str,
+/// Dibuja texto usando la fuente bitmap del juego.
+pub fn dibujar_texto(
+    buffer: &mut BufferPantalla,
+    texto: &str,
     x: i32,
     y: i32,
-    scale: i32,
+    escala: i32,
     color: u32,
 ) {
     let mut cursor = x;
-    for ch in text.chars() {
-        if ch == ' ' {
-            cursor += 4 * scale;
+    for caracter in texto.chars() {
+        if caracter == ' ' {
+            cursor += 4 * escala;
             continue;
         }
-        let glyph_key = match ch {
+        let clave_glifo = match caracter {
             'á' | 'Á' => 'Á',
             'é' | 'É' => 'É',
             'í' | 'Í' => 'Í',
             'ó' | 'Ó' => 'Ó',
             'ú' | 'Ú' => 'Ú',
             'ñ' | 'Ñ' => 'Ñ',
-            _ => ch.to_ascii_uppercase(),
+            _ => caracter.to_ascii_uppercase(),
         };
-        if let Some((_, glyph)) = GLYPHS.iter().find(|(letter, _)| *letter == glyph_key) {
-            for (row, bits) in glyph.iter().enumerate() {
-                for col in 0..5 {
-                    if bits & (1 << (4 - col)) != 0 {
-                        framebuffer.fill_rect(
-                            cursor + col * scale,
-                            y + row as i32 * scale,
-                            scale,
-                            scale,
+        if let Some((_, glifo)) = GLIFOS.iter().find(|(letra, _)| *letra == clave_glifo) {
+            for (fila, bits) in glifo.iter().enumerate() {
+                for columna in 0..5 {
+                    if bits & (1 << (4 - columna)) != 0 {
+                        buffer.rellenar_rectangulo(
+                            cursor + columna * escala,
+                            y + fila as i32 * escala,
+                            escala,
+                            escala,
                             color,
                         );
                     }
                 }
             }
         }
-        cursor += 6 * scale;
+        cursor += 6 * escala;
     }
 }
 
-pub fn text_width(text: &str, scale: i32) -> i32 {
-    text.chars()
-        .map(|c| (if c == ' ' { 4 } else { 6 }) * scale)
+/// Calcula el ancho que ocupará un texto con una escala determinada.
+pub fn ancho_texto(texto: &str, escala: i32) -> i32 {
+    texto
+        .chars()
+        .map(|caracter| (if caracter == ' ' { 4 } else { 6 }) * escala)
         .sum()
 }

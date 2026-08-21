@@ -1,113 +1,126 @@
 use nalgebra_glm::Vec2;
 
-pub const CELL_SIZE: f32 = 64.0;
-pub type Grid = Vec<Vec<char>>;
+pub const TAMANO_CELDA: f32 = 64.0;
+pub type Cuadricula = Vec<Vec<char>>;
 
 #[derive(Clone, Copy)]
-pub struct Exit {
-    pub position: Vec2,
+pub struct Salida {
+    pub posicion: Vec2,
 }
 
 #[derive(Clone, Copy)]
-pub struct Collectible {
-    pub position: Vec2,
+pub struct Coleccionable {
+    pub posicion: Vec2,
 }
 
-pub struct GameMap {
-    pub cells: Grid,
-    pub start: Vec2,
-    pub exit: Exit,
-    pub collectibles: Vec<Collectible>,
-    pub discovered: Vec<Vec<bool>>,
+pub struct MapaJuego {
+    pub celdas: Cuadricula,
+    pub inicio: Vec2,
+    pub salida: Salida,
+    pub coleccionables: Vec<Coleccionable>,
+    pub descubiertas: Vec<Vec<bool>>,
 }
 
-impl GameMap {
-    pub fn load() -> Self {
-        let mut cells = Vec::new();
-        let mut start = Vec2::new(CELL_SIZE * 1.5, CELL_SIZE * 1.5);
-        let mut exit = Exit {
-            position: Vec2::new(CELL_SIZE * 22.5, CELL_SIZE * 19.5),
+impl MapaJuego {
+    /// Carga el mapa ASCII y convierte sus marcas especiales en objetos del juego.
+    pub fn cargar() -> Self {
+        let mut celdas = Vec::new();
+        let mut inicio = Vec2::new(TAMANO_CELDA * 1.5, TAMANO_CELDA * 1.5);
+        let mut salida = Salida {
+            posicion: Vec2::new(TAMANO_CELDA * 22.5, TAMANO_CELDA * 19.5),
         };
-        let mut collectibles = Vec::new();
-        for (row, line) in include_str!("../map.txt").lines().enumerate() {
-            let mut parsed = Vec::new();
-            for (col, tile) in line.chars().enumerate() {
-                let pos = Vec2::new(
-                    (col as f32 + 0.5) * CELL_SIZE,
-                    (row as f32 + 0.5) * CELL_SIZE,
+        let mut coleccionables = Vec::new();
+        for (fila, linea) in include_str!("../map.txt").lines().enumerate() {
+            let mut fila_parseada = Vec::new();
+            for (columna, baldosa) in linea.chars().enumerate() {
+                let posicion = Vec2::new(
+                    (columna as f32 + 0.5) * TAMANO_CELDA,
+                    (fila as f32 + 0.5) * TAMANO_CELDA,
                 );
-                match tile {
+                match baldosa {
                     'S' => {
-                        start = pos;
-                        parsed.push(' ');
+                        inicio = posicion;
+                        fila_parseada.push(' ');
                     }
                     'D' => {
-                        exit = Exit { position: pos };
-                        parsed.push('D');
+                        salida = Salida { posicion };
+                        fila_parseada.push('D');
                     }
                     'B' | 'P' | 'K' => {
-                        collectibles.push(Collectible { position: pos });
-                        parsed.push(' ');
+                        coleccionables.push(Coleccionable { posicion });
+                        fila_parseada.push(' ');
                     }
-                    _ => parsed.push(tile),
+                    _ => fila_parseada.push(baldosa),
                 }
             }
-            cells.push(parsed);
+            celdas.push(fila_parseada);
         }
-        let discovered = vec![vec![false; cells.first().map_or(0, Vec::len)]; cells.len()];
+        let descubiertas = vec![vec![false; celdas.first().map_or(0, Vec::len)]; celdas.len()];
         Self {
-            cells,
-            start,
-            exit,
-            collectibles,
-            discovered,
+            celdas,
+            inicio,
+            salida,
+            coleccionables,
+            descubiertas,
         }
     }
 
-    pub fn width(&self) -> usize {
-        self.cells.first().map_or(0, Vec::len)
+    /// Devuelve el número de columnas del mapa.
+    pub fn ancho(&self) -> usize {
+        self.celdas.first().map_or(0, Vec::len)
     }
-    pub fn height(&self) -> usize {
-        self.cells.len()
+
+    /// Devuelve el número de filas del mapa.
+    pub fn alto(&self) -> usize {
+        self.celdas.len()
     }
-    pub fn is_wall(&self, col: i32, row: i32) -> bool {
-        if row < 0 || col < 0 {
+
+    /// Indica si una celda es una pared o está fuera del mapa.
+    pub fn es_pared(&self, columna: i32, fila: i32) -> bool {
+        if fila < 0 || columna < 0 {
             return true;
         }
-        self.cells
-            .get(row as usize)
-            .and_then(|r| r.get(col as usize))
-            .is_none_or(|c| *c != ' ')
+        self.celdas
+            .get(fila as usize)
+            .and_then(|fila| fila.get(columna as usize))
+            .is_none_or(|baldosa| *baldosa != ' ')
     }
-    pub fn tile_at(&self, col: i32, row: i32) -> char {
-        self.cells
-            .get(row as usize)
-            .and_then(|r| r.get(col as usize))
+
+    /// Obtiene la baldosa de una celda, usando pared si está fuera del mapa.
+    pub fn baldosa_en(&self, columna: i32, fila: i32) -> char {
+        self.celdas
+            .get(fila as usize)
+            .and_then(|fila| fila.get(columna as usize))
             .copied()
             .unwrap_or('#')
     }
-    pub fn world_to_cell(position: Vec2) -> (i32, i32) {
+
+    /// Convierte una posición del mundo a coordenadas de celda.
+    pub fn mundo_a_celda(posicion: Vec2) -> (i32, i32) {
         (
-            (position.x / CELL_SIZE) as i32,
-            (position.y / CELL_SIZE) as i32,
+            (posicion.x / TAMANO_CELDA) as i32,
+            (posicion.y / TAMANO_CELDA) as i32,
         )
     }
-    pub fn reveal_near(&mut self, position: Vec2, radius: i32) {
-        let (cx, cy) = Self::world_to_cell(position);
-        for row in cy - radius..=cy + radius {
-            for col in cx - radius..=cx + radius {
-                if row >= 0
-                    && col >= 0
-                    && (row as usize) < self.height()
-                    && (col as usize) < self.width()
+    /// Marca como descubiertas las celdas cercanas al jugador.
+    pub fn revelar_cerca(&mut self, posicion: Vec2, radio: i32) {
+        let (celda_x, celda_y) = Self::mundo_a_celda(posicion);
+        for fila in celda_y - radio..=celda_y + radio {
+            for columna in celda_x - radio..=celda_x + radio {
+                if fila >= 0
+                    && columna >= 0
+                    && (fila as usize) < self.alto()
+                    && (columna as usize) < self.ancho()
                 {
-                    self.discovered[row as usize][col as usize] = true;
+                    self.descubiertas[fila as usize][columna as usize] = true;
                 }
             }
         }
     }
-    pub fn wall_color(tile: char) -> u32 {
-        match tile {
+
+    /// Devuelve el color usado para representar una baldosa en el minimapa.
+    pub fn color_pared(baldosa: char) -> u32 {
+        match baldosa {
             '#' => 0x7D2935,
             'R' => 0xA84436,
             'W' => 0xA26A3A,

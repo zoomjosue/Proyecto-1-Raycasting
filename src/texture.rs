@@ -1,69 +1,73 @@
-pub struct TextureAtlas {
-    pixels: Vec<u8>,
-    width: u32,
-    height: u32,
-    door_pixels: Vec<u8>,
-    door_width: u32,
-    door_height: u32,
+pub struct AtlasTexturas {
+    pixeles: Vec<u8>,
+    ancho: u32,
+    alto: u32,
+    pixeles_puerta: Vec<u8>,
+    ancho_puerta: u32,
+    alto_puerta: u32,
 }
 
-impl TextureAtlas {
-    pub fn load() -> Self {
-        let image = image::load_from_memory(include_bytes!("../assets/haunted_wall_atlas.png"))
+impl AtlasTexturas {
+    /// Carga el atlas de paredes y la textura independiente de la puerta.
+    pub fn cargar() -> Self {
+        let imagen = image::load_from_memory(include_bytes!("../assets/haunted_wall_atlas.png"))
             .expect("No se pudo cargar assets/haunted_wall_atlas.png")
             .to_rgba8();
-        let (width, height) = image.dimensions();
-        let door = image::load_from_memory(include_bytes!("../assets/broken_door.png"))
+        let (ancho, alto) = imagen.dimensions();
+        let puerta = image::load_from_memory(include_bytes!("../assets/broken_door.png"))
             .expect("No se pudo cargar assets/broken_door.png")
             .to_rgba8();
-        let (door_width, door_height) = door.dimensions();
+        let (ancho_puerta, alto_puerta) = puerta.dimensions();
         Self {
-            pixels: image.into_raw(),
-            width,
-            height,
-            door_pixels: door.into_raw(),
-            door_width,
-            door_height,
+            pixeles: imagen.into_raw(),
+            ancho,
+            alto,
+            pixeles_puerta: puerta.into_raw(),
+            ancho_puerta,
+            alto_puerta,
         }
     }
 
-    pub fn sample(&self, tile: char, wall_u: f32, wall_v: f32) -> u32 {
-        let (atlas_x, atlas_y) = match tile {
+    /// Muestrea una textura del atlas según el tipo de pared y sus coordenadas.
+    pub fn muestrear(&self, baldosa: char, u_pared: f32, v_pared: f32) -> u32 {
+        let (coordenada_atlas_x, coordenada_atlas_y) = match baldosa {
             'R' => (1.0, 0.0), // ladrillo rojo
             'I' => (0.0, 1.0), // placas de hierro
             'W' => (1.0, 1.0), // madera húmeda
             _ => (0.0, 0.0),   // piedra con musgo
         };
-        let u = atlas_x * 0.5 + wall_u.rem_euclid(1.0) * 0.49 + 0.005;
-        let v = atlas_y * 0.5 + wall_v.rem_euclid(1.0) * 0.49 + 0.005;
-        let x = ((u * self.width as f32) as u32).min(self.width - 1);
-        let y = ((v * self.height as f32) as u32).min(self.height - 1);
-        let offset = ((y * self.width + x) * 4) as usize;
-        ((self.pixels[offset] as u32) << 16)
-            | ((self.pixels[offset + 1] as u32) << 8)
-            | self.pixels[offset + 2] as u32
+        let u = coordenada_atlas_x * 0.5 + u_pared.rem_euclid(1.0) * 0.49 + 0.005;
+        let v = coordenada_atlas_y * 0.5 + v_pared.rem_euclid(1.0) * 0.49 + 0.005;
+        let x = ((u * self.ancho as f32) as u32).min(self.ancho - 1);
+        let y = ((v * self.alto as f32) as u32).min(self.alto - 1);
+        let desplazamiento = ((y * self.ancho + x) * 4) as usize;
+        ((self.pixeles[desplazamiento] as u32) << 16)
+            | ((self.pixeles[desplazamiento + 1] as u32) << 8)
+            | self.pixeles[desplazamiento + 2] as u32
     }
 
-    pub fn sample_door(&self, wall_u: f32, wall_v: f32) -> u32 {
-        let x = ((wall_u.rem_euclid(1.0) * self.door_width as f32) as u32).min(self.door_width - 1);
+    /// Muestrea la textura de la puerta usando coordenadas normalizadas.
+    pub fn muestrear_puerta(&self, u_pared: f32, v_pared: f32) -> u32 {
+        let x = ((u_pared.rem_euclid(1.0) * self.ancho_puerta as f32) as u32)
+            .min(self.ancho_puerta - 1);
         let y =
-            ((wall_v.clamp(0.0, 1.0) * self.door_height as f32) as u32).min(self.door_height - 1);
-        let offset = ((y * self.door_width + x) * 4) as usize;
-        ((self.door_pixels[offset] as u32) << 16)
-            | ((self.door_pixels[offset + 1] as u32) << 8)
-            | self.door_pixels[offset + 2] as u32
+            ((v_pared.clamp(0.0, 1.0) * self.alto_puerta as f32) as u32).min(self.alto_puerta - 1);
+        let desplazamiento = ((y * self.ancho_puerta + x) * 4) as usize;
+        ((self.pixeles_puerta[desplazamiento] as u32) << 16)
+            | ((self.pixeles_puerta[desplazamiento + 1] as u32) << 8)
+            | self.pixeles_puerta[desplazamiento + 2] as u32
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::TextureAtlas;
+    use super::AtlasTexturas;
 
     #[test]
-    fn haunted_atlas_is_available() {
-        let atlas = TextureAtlas::load();
-        assert!(atlas.width > 0 && atlas.height > 0);
-        assert_ne!(atlas.sample('#', 0.25, 0.25), 0);
-        assert_ne!(atlas.sample_door(0.5, 0.5), 0);
+    fn atlas_del_castillo_esta_disponible() {
+        let atlas = AtlasTexturas::cargar();
+        assert!(atlas.ancho > 0 && atlas.alto > 0);
+        assert_ne!(atlas.muestrear('#', 0.25, 0.25), 0);
+        assert_ne!(atlas.muestrear_puerta(0.5, 0.5), 0);
     }
 }
