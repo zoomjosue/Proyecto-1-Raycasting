@@ -54,7 +54,7 @@ impl Jugador {
             } else if let Some(x_anterior) = self.ultimo_x_mouse {
                 let delta_mouse = x_mouse - x_anterior;
                 if delta_mouse.abs() < ancho_ventana * 0.5 {
-                    self.angulo += delta_mouse * 0.004;
+                    self.angulo += delta_mouse * 0.002;
                 }
             }
             self.ultimo_x_mouse = Some(x_mouse);
