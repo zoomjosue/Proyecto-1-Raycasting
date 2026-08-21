@@ -116,7 +116,7 @@ impl Juego {
                         audio.reproducir_golpe_pared();
                     }
                 }
-                self.mapa.revelar_cerca(self.jugador.posicion, 3);
+                self.mapa.revelar_cerca(self.jugador.posicion, 1);
                 self.recoger_objetos();
                 let cerca_salida = (self.jugador.posicion - self.mapa.salida.posicion).magnitude()
                     < TAMANO_CELDA * 0.9;
