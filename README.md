@@ -24,3 +24,5 @@ El minimapa permanece oculto hasta pulsar `M`. Cuando se muestra, solo dibuja la
 
 
 En el mapa, `R` representa ladrillo rojo, `W` madera, `I` hierro y `D` la puerta de salida. Las marcas `B`, `P` y `K` indican las posiciones de las llaves dorada, plateada y roja.
+
+Video Youtube: https://youtu.be/tl3DmUuF8ik
